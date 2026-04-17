@@ -1,1 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stream Wheel</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+<style>
+  :root {
+    --bg: #fdf6ec;
+    --bg-2: #faecd8;
+    --surface: #fffaf3;
+    --surface-2: #fef3e2;
+    --border: #e8d5b7;
+    --border-light: #f0e2c8;
+    --text: #2c1a0e;
+    --text-mid: #6b4226;
+    --text-muted: #a07850;
+    --primary: #e8621a;
+    --primary-hover: #cf5010;
+    --primary-glow: rgba(232, 98, 26, 0.25);
+    --accent: #f7b731;
+    --accent-soft: rgba(247, 183, 49, 0.15);
+    --shadow-sm: 0 2px 8px rgba(60, 20, 0, 0.07);
+    --shadow: 0 8px 32px rgba(60, 20, 0, 0.12);
+    --shadow-lg: 0 20px 60px rgba(60, 20, 0, 0.18);
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  }
+
+  [data-theme="dark"] {
+    --bg: #1a0f07;
+    --bg-2: #231408;
+    --surface: #251508;
+    --surface-2: #2f1a0a;
+    --border: #4a2e14;
+    --border-light: #3d2410;
+    --text: #fdf0e0;
+    --text-mid: #d4936a;
+    --text-muted: #9a6844;
+    --primary: #f07530;
+    --primary-hover: #e8621a;
+    --primary-glow: rgba(240, 117, 48, 0.3);
+    --accent: #f7b731;
+    --accent-soft: rgba(247, 183, 49, 0.1);
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+    --shadow: 0 8px 32px rgba(0,0,0,0.4);
+    --shadow-lg: 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+    transition: background 0.4s, color 0.4s;
+  }
+
+  /* Subtle paper texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: var(--grain);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+  }
+
+  /* --- SIDEBAR --- */
+  .sidebar {
+    width: 360px;
+    min-width: 360px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 28px 24px;
+    z-index: 20;
+    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 3px 0 24px rgba(60, 20, 0, 0.08);
+    overflow-y: auto;
+    position: relative;
+  }
+
+  .sidebar::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    border-radius: 0 0 4px 4px;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 5px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+  .sidebar.hidden {
+    transform: translateX(-100%);
+    position: absolute;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+  }
+
+  .logo {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .logo-eyebrow {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--primary);
+    margin-bottom: 2px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  h1 span { color: var(--primary); }
+
+  .controls-top { display: flex; gap: 8px; }
+
+  .icon-btn {
+    width: 36px; height: 36px;
+    background: var(--surface-2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .icon-btn:hover {
+    background: var(--border);
+    color: var(--text);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .section-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 22px 0 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-light);
+  }
+
+  .row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+
+  select, input[type="range"] {
+    flex: 1;
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  select:focus, select:hover { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow); }
+
+  .btn-small {
+    padding: 9px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text-mid);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-small:hover {
+    background: var(--border);
+    color: var(--text);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  textarea {
+    width: 100%;
+    resize: none;
+    height: 150px;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.7;
+    outline: none;
+    margin-bottom: 10px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+  }
+  textarea::placeholder { color: var(--text-muted); opacity: 0.6; }
+
+  .settings-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    margin-bottom: 0;
+    user-select: none;
+  }
+
+  input[type="checkbox"] {
+    width: 16px; height: 16px;
+    cursor: pointer;
+    accent-color: var(--primary);
+    border-radius: 4px;
+  }
+
+  input[type="range"] {
+    padding: 0;
+    height: 4px;
+    border: none;
+    accent-color: var(--primary);
+    background: var(--border);
+  }
+
+  .range-val {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary);
+    min-width: 28px;
+    text-align: right;
+  }
+
+  /* Entry count badge */
+  .entry-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+    border: 1px solid var(--accent);
+    letter-spacing: 0.5px;
+  }
+
+  /* --- MAIN STAGE --- */
+  .stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background: var(--bg);
+    /* subtle radial warmth */
+    background-image: radial-gradient(ellipse 70% 60% at 60% 50%, var(--bg-2) 0%, transparent 70%);
+  }
+
+  .gear-btn {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    width: 46px; height: 46px;
+    font-size: 18px;
+    background: var(--surface);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    box-shadow: var(--shadow-sm);
+    z-index: 10;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s;
+    cursor: pointer;
+    font-family: inherit;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sidebar.hidden ~ .stage .gear-btn { opacity: 1; pointer-events: auto; }
+  .gear-btn:hover { color: var(--primary); border-color: var(--primary); transform: rotate(25deg) scale(1.05); box-shadow: var(--shadow); }
+
+  /* Spin count badge */
+  .spin-count-badge {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 10px 18px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    box-shadow: var(--shadow-sm);
+    text-align: center;
+    line-height: 1.3;
+  }
+  .spin-count-badge strong {
+    display: block;
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--primary);
+  }
+
+  .wheel-wrapper {
+    position: relative;
+    width: 580px;
+    height: 580px;
+    margin-bottom: 36px;
+  }
+
+  .wheel-glow {
+    position: absolute;
+    inset: -20px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+    animation: pulse-glow 3s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.4; transform: scale(0.95); }
+    50% { opacity: 0.8; transform: scale(1.02); }
+  }
+
+  canvas { width: 100%; height: 100%; border-radius: 50%; display: block; }
+
+  .spin-action-btn {
+    background: linear-gradient(135deg, var(--primary), #d45010);
+    color: white;
+    padding: 15px 54px;
+    font-size: 18px;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 8px 28px var(--primary-glow), inset 0 1px 0 rgba(255,255,255,0.2);
+    transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .spin-action-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 100%);
+    pointer-events: none;
+  }
+  .spin-action-btn:hover {
+    background: linear-gradient(135deg, var(--primary-hover), #b83f00);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 16px 40px var(--primary-glow);
+  }
+  .spin-action-btn:active { transform: translateY(0) scale(0.98); }
+  .spin-action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Pointer — warm amber/orange */
+  .pointer {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 42px;
+    height: 52px;
+    z-index: 5;
+  }
+  .pointer svg {
+    width: 100%; height: 100%;
+    filter: drop-shadow(0 4px 8px rgba(60,20,0,0.35));
+    transform-origin: top center;
+    transition: transform 0.07s ease-out;
+  }
+  .pointer.ticking svg { transform: rotate(26deg); }
+
+  /* Hub */
+  .hub {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 52px; height: 52px;
+    background: radial-gradient(circle at 35% 35%, var(--surface), var(--bg-2));
+    border: 4px solid var(--bg);
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.08), 0 4px 16px rgba(60,20,0,0.2);
+  }
+  .hub::after {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    border-radius: 50%;
+    background: var(--primary);
+    opacity: 0.25;
+  }
+
+  #confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
+
+  /* Winner Popup */
+  .winner-popup {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.7);
+    background: var(--surface);
+    color: var(--text);
+    padding: 28px 52px;
+    border-radius: 20px;
+    border: 2px solid var(--primary);
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 900;
+    text-align: center;
+    box-shadow: var(--shadow-lg), 0 0 0 8px var(--primary-glow);
+    opacity: 0;
+    transition: all 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 101;
+    pointer-events: none;
+    max-width: 480px;
+    word-break: break-word;
+    line-height: 1.2;
+  }
+  .winner-popup::before {
+    content: '🎉';
+    display: block;
+    font-size: 28px;
+    margin-bottom: 8px;
+    font-family: sans-serif;
+  }
+  .winner-popup.show { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+
+  /* Decorative ring behind wheel */
+  .wheel-ring {
+    position: absolute;
+    inset: -12px;
+    border-radius: 50%;
+    border: 2px dashed var(--border);
+    opacity: 0.5;
+    pointer-events: none;
+    animation: spin-ring 60s linear infinite;
+  }
+  @keyframes spin-ring { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="sidebar hidden" id="sidebar">
+  <div class="header">
+    <div class="logo">
+      <span class="logo-eyebrow">Stream Tool</span>
+      <h1>Spin the <span>Wheel</span></h1>
+    </div>
+    <div class="controls-top">
+      <button class="icon-btn" id="themeBtn" title="Toggle Theme">🌙</button>
+      <button class="icon-btn" id="closeSidebarBtn" title="Close">✕</button>
+    </div>
+  </div>
+
+  <div class="section-title">Presets</div>
+  <div class="row">
+    <select id="presetSelect"></select>
+  </div>
+  <div class="row">
+    <button class="btn-small" style="flex:1;" id="savePresetBtn">💾 Save</button>
+    <button class="btn-small" style="color: var(--primary);" id="deletePresetBtn">🗑 Delete</button>
+  </div>
+
+  <div class="section-title">
+    Entries
+    <span class="entry-count" id="entryCount">0</span>
+  </div>
+  <textarea id="itemsInput" placeholder="One entry per line..." spellcheck="false"></textarea>
+  <div class="row">
+    <label class="settings-label" style="flex:1; margin:0;">
+      <input type="checkbox" id="eliminateCb"> Remove winner after spin
+    </label>
+    <button class="btn-small" id="equalizeBtn">⚖ Equalize</button>
+  </div>
+
+  <div class="section-title">Visuals</div>
+  <div class="row">
+    <span class="settings-label" style="min-width:90px;">Wheel Colors</span>
+    <select id="paletteSelect">
+      <option value="warm">🔥 Warm & Spicy</option>
+      <option value="rainbow">🌈 Rainbow</option>
+      <option value="sunset">🌅 Sunset</option>
+      <option value="dark">🌑 Dark Mode</option>
+      <option value="light">🌸 Light/Pastel</option>
+      <option value="cool">🧊 Cool Tones</option>
+    </select>
+  </div>
+  <div class="row">
+    <span class="settings-label" style="min-width:90px;">Font Color</span>
+    <select id="fontColorSelect">
+      <option value="#ffffff">White</option>
+      <option value="#111111">Black</option>
+      <option value="#fde047">Golden Yellow</option>
+    </select>
+  </div>
+
+  <div class="section-title">Physics & Audio</div>
+  <div class="row">
+    <span class="settings-label" style="min-width:70px;">Duration</span>
+    <input type="range" id="durationSlider" min="3" max="15" value="6">
+    <span class="range-val" id="durationVal">6s</span>
+  </div>
+  <div class="row">
+    <span class="settings-label" style="min-width:70px;">Volume</span>
+    <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="0.5">
+    <span class="range-val" id="volumeVal">50%</span>
+  </div>
+  <div class="row">
+    <span class="settings-label" style="min-width:90px;">Sound</span>
+    <select id="soundTypeSelect">
+      <option value="mechanical">🔧 Mechanical Clack</option>
+      <option value="arcade">🕹 Arcade Blip</option>
+    </select>
+  </div>
+</div>
+
+<div class="stage">
+  <button class="gear-btn" id="showSidebarBtn" title="Open Setup">⚙️</button>
+
+  <div class="spin-count-badge">
+    <strong id="spinCountNum">0</strong>
+    Spins
+  </div>
+
+  <div class="wheel-wrapper">
+    <div class="wheel-ring"></div>
+    <div class="wheel-glow"></div>
+    <div class="pointer" id="pointer">
+      <svg viewBox="0 0 50 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M25 60L5 15C1 7 7 0 15 0H35C43 0 49 7 45 15L25 60Z" fill="#c84e00"/>
+        <path d="M25 50L11 15C9 10 12 5 18 5H32C38 5 41 10 39 15L25 50Z" fill="#e8621a"/>
+        <circle cx="25" cy="9" r="5" fill="#f7b731" opacity="0.8"/>
+      </svg>
+    </div>
+    <canvas id="wheel"></canvas>
+    <div class="hub"></div>
+  </div>
+
+  <button class="spin-action-btn" id="spinBtn">Spin!</button>
+
+  <div class="winner-popup" id="winnerPopup">Winner!</div>
+  <canvas id="confetti"></canvas>
+</div>
+
+<script>
+// --- CONFIGURATIONS ---
+const THEMES = {
+  warm:    ["#e8621a", "#d4500e", "#f7b731", "#c84e00", "#e07520", "#b33d00", "#f5a020", "#8b2c00"],
+  sunset:  ["#ff6b35", "#f7b731", "#e8621a", "#ff8c42", "#ffd166", "#e63946", "#f4a261", "#e76f51"],
+  rainbow: ["#ef4444", "#f97316", "#eab308", "#10b981", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899"],
+  dark:    ["#1e293b", "#334155", "#475569", "#0f172a"],
+  light:   ["#fef08a", "#bbf7d0", "#bfdbfe", "#fbcfe8", "#e9d5ff", "#fed7aa"],
+  cool:    ["#083344", "#0e7490", "#0369a1", "#1d4ed8", "#4338ca"]
+};
+
+const defaultList = "Playing Random Duos\nWorst Weapon Challenge\nQ&A from Chat\nViewers Control My Game\nDrop Random Item\nDo 10 Pushups";
+let savedPresets = JSON.parse(localStorage.getItem('wheelPresets')) || { "Default": defaultList };
+
+// --- APP STATE ---
+let items = [], weights = [], boundaries = [];
+let isSpinning = false, currentRotation = 0, lastTickSlice = -1;
+let hoveredLine = -1, isDraggingLine = false;
+let spinCount = 0;
+
+// Settings
+let currentColors = THEMES.warm;
+let fontColor = "#ffffff";
+let spinSeconds = 6, tickVolume = 0.5, soundType = "mechanical";
+
+// --- DOM ---
+const canvas = document.getElementById('wheel');
+const ctx = canvas.getContext('2d');
+const itemsInput = document.getElementById('itemsInput');
+const spinBtn = document.getElementById('spinBtn');
+const pointer = document.getElementById('pointer');
+const sidebar = document.getElementById('sidebar');
+const presetSelect = document.getElementById('presetSelect');
+
+// --- PRESETS ---
+function loadPresets() {
+  presetSelect.innerHTML = '';
+  for (let key in savedPresets) {
+    let opt = document.createElement('option');
+    opt.value = key; opt.innerText = key;
+    presetSelect.appendChild(opt);
+  }
+}
+
+document.getElementById('savePresetBtn').onclick = () => {
+  const name = prompt("Preset name:");
+  if (name) {
+    savedPresets[name] = itemsInput.value;
+    localStorage.setItem('wheelPresets', JSON.stringify(savedPresets));
+    loadPresets();
+    presetSelect.value = name;
+  }
+};
+
+document.getElementById('deletePresetBtn').onclick = () => {
+  const name = presetSelect.value;
+  if (name === "Default") return alert("Cannot delete Default preset.");
+  if (confirm(`Delete "${name}"?`)) {
+    delete savedPresets[name];
+    localStorage.setItem('wheelPresets', JSON.stringify(savedPresets));
+    loadPresets();
+    itemsInput.value = savedPresets["Default"];
+    updateItems();
+  }
+};
+
+presetSelect.onchange = () => { itemsInput.value = savedPresets[presetSelect.value]; updateItems(); };
+
+// --- AUDIO ---
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function playTick() {
+  if (tickVolume === 0) return;
+  if (!audioCtx) audioCtx = new AudioContext();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const osc = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+  const t = audioCtx.currentTime;
+  if (soundType === 'mechanical') {
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(500, t);
+    osc.frequency.exponentialRampToValueAtTime(120, t + 0.04);
+    gainNode.gain.setValueAtTime(tickVolume, t);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+    osc.start(t); osc.stop(t + 0.04);
+  } else {
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1200, t); osc.frequency.setValueAtTime(1500, t + 0.02);
+    gainNode.gain.setValueAtTime(tickVolume * 0.4, t);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+    osc.start(t); osc.stop(t + 0.04);
+  }
+  pointer.classList.add('ticking');
+  setTimeout(() => pointer.classList.remove('ticking'), 40);
+}
+
+// --- CANVAS ---
+function resizeCanvas() {
+  const size = 580;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = size * dpr; canvas.height = size * dpr;
+  canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
+  ctx.scale(dpr, dpr);
+  drawWheel();
+}
+window.addEventListener('resize', resizeCanvas);
+
+// --- MATH ---
+function calculateBoundaries() {
+  let total = weights.reduce((a, b) => a + b, 0);
+  let acc = 0; boundaries = [];
+  for (let i = 0; i < items.length; i++) {
+    acc += (weights[i] / total) * Math.PI * 2;
+    boundaries.push(acc);
+  }
+}
+
+function updateItems() {
+  items = itemsInput.value.split('\n').map(i => i.trim()).filter(i => i !== '');
+  if (items.length === 0) items = ["Add options →"];
+  weights = items.map(() => 1);
+  calculateBoundaries();
+  savedPresets[presetSelect.value] = itemsInput.value;
+  localStorage.setItem('wheelPresets', JSON.stringify(savedPresets));
+  document.getElementById('entryCount').textContent = items.length;
+  drawWheel();
+}
+
+document.getElementById('equalizeBtn').onclick = () => {
+  weights = items.map(() => 1);
+  calculateBoundaries(); drawWheel();
+};
+
+itemsInput.addEventListener('input', () => { if (!isSpinning) updateItems(); });
+
+// --- DRAW WHEEL ---
+function drawWheel() {
+  const size = 580;
+  const cx = size / 2, cy = size / 2, radius = size / 2;
+  ctx.clearRect(0, 0, size, size);
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(currentRotation);
+
+  let startAngle = 0;
+  for (let i = 0; i < items.length; i++) {
+    let endAngle = boundaries[i];
+
+    // Slice
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, radius, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = currentColors[i % currentColors.length];
+    ctx.fill();
+
+    // Subtle inner glow on slice edge
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.stroke();
+
+    // Divider
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(0,0,0,0.18)";
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(endAngle) * radius, Math.sin(endAngle) * radius);
+    ctx.stroke();
+
+    // Drag Ball (Peg)
+    if (i < items.length - 1) {
+      const pegRadius = (hoveredLine === i) ? 12 : 7;
+      const pegX = Math.cos(endAngle) * (radius - 16);
+      const pegY = Math.sin(endAngle) * (radius - 16);
+      ctx.beginPath();
+      ctx.arc(pegX, pegY, pegRadius, 0, 2 * Math.PI);
+      ctx.fillStyle = currentColors[i % currentColors.length];
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = fontColor === "#111111" ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.8)";
+      ctx.stroke();
+    }
+
+    // Text
+    ctx.save();
+    let textAngle = startAngle + (endAngle - startAngle) / 2;
+    ctx.rotate(textAngle);
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = fontColor;
+    ctx.font = "bold 22px 'DM Sans', sans-serif";
+    ctx.shadowColor = fontColor === "#111111" ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.6)";
+    ctx.shadowBlur = 5;
+    ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
+    let text = items[i];
+    if (text.length > 20) text = text.substring(0, 18) + "…";
+    ctx.fillText(text, radius - 38, 0);
+    ctx.restore();
+
+    startAngle = endAngle;
+  }
+
+  // Outer ring decoration
+  ctx.beginPath();
+  ctx.arc(0, 0, radius - 4, 0, Math.PI * 2);
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = "rgba(0,0,0,0.12)";
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, 0, radius - 4, 0, Math.PI * 2);
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = "rgba(255,255,255,0.15)";
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// --- MOUSE INTERACTIONS ---
+canvas.addEventListener('mousemove', (e) => {
+  if (isSpinning) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left - rect.width / 2;
+  const y = e.clientY - rect.top - rect.height / 2;
+  const dist = Math.sqrt(x * x + y * y);
+  let mouseAngle = Math.atan2(y, x);
+  let normMouse = (mouseAngle - currentRotation) % (Math.PI * 2);
+  if (normMouse < 0) normMouse += Math.PI * 2;
+
+  if (isDraggingLine && hoveredLine !== -1 && hoveredLine < items.length - 1) {
+    canvas.style.cursor = 'grabbing';
+    let prevB = hoveredLine === 0 ? 0 : boundaries[hoveredLine - 1];
+    let nextB = boundaries[hoveredLine + 1];
+    let minRad = 0.08;
+    if (normMouse > prevB + minRad && normMouse < nextB - minRad) {
+      let oldWeightSum = weights[hoveredLine] + weights[hoveredLine + 1];
+      let newRatio = (normMouse - prevB) / (nextB - prevB);
+      weights[hoveredLine] = oldWeightSum * newRatio;
+      weights[hoveredLine + 1] = oldWeightSum * (1 - newRatio);
+      calculateBoundaries(); drawWheel();
+    }
+  } else {
+    let found = -1;
+    if (Math.abs(dist - (290 - 16)) < 30) {
+      for (let i = 0; i < items.length - 1; i++) {
+        let diff = Math.abs(normMouse - boundaries[i]);
+        if (diff > Math.PI) diff = Math.PI * 2 - diff;
+        if (diff < 0.08) { found = i; break; }
+      }
+    }
+    if (found !== hoveredLine) {
+      hoveredLine = found;
+      canvas.style.cursor = hoveredLine !== -1 ? 'grab' : 'default';
+      drawWheel();
+    }
+  }
+});
+
+canvas.addEventListener('mousedown', () => { if (hoveredLine !== -1) isDraggingLine = true; });
+window.addEventListener('mouseup', () => { isDraggingLine = false; canvas.style.cursor = hoveredLine !== -1 ? 'grab' : 'default'; });
+
+// --- SPIN PHYSICS ---
+function easeOut(t, b, c, d) { t /= d; t--; return c * (t * t * t + 1) + b; }
+let spinStart = 0, spinDuration = 0, targetRotation = 0, startRotation = 0;
+
+function animateSpin(timestamp) {
+  if (!spinStart) spinStart = timestamp;
+  const elapsed = timestamp - spinStart;
+
+  if (elapsed < spinDuration) {
+    currentRotation = easeOut(elapsed, startRotation, targetRotation - startRotation, spinDuration);
+    let normalizedRot = (Math.PI * 2 - (currentRotation % (Math.PI * 2))) % (Math.PI * 2);
+    let pointerAngle = (normalizedRot - Math.PI / 2 + Math.PI * 2) % (Math.PI * 2);
+    let currentSlice = 0;
+    for (let i = 0; i < boundaries.length; i++) { if (pointerAngle < boundaries[i]) { currentSlice = i; break; } }
+    if (currentSlice !== lastTickSlice) { if (lastTickSlice !== -1) playTick(); lastTickSlice = currentSlice; }
+    drawWheel();
+    requestAnimationFrame(animateSpin);
+  } else {
+    currentRotation = targetRotation % (2 * Math.PI);
+    drawWheel();
+    isSpinning = false;
+    spinBtn.disabled = false;
+    spinBtn.innerText = "Spin!";
+
+    let normalizedRot = (Math.PI * 2 - (currentRotation % (Math.PI * 2))) % (Math.PI * 2);
+    let pointerAngle = (normalizedRot - Math.PI / 2 + Math.PI * 2) % (Math.PI * 2);
+    let winningIndex = 0;
+    for (let i = 0; i < boundaries.length; i++) { if (pointerAngle < boundaries[i]) { winningIndex = i; break; } }
+
+    const winnerPopup = document.getElementById('winnerPopup');
+    winnerPopup.innerText = items[winningIndex];
+    winnerPopup.classList.add('show');
+    fireConfetti();
+
+    spinCount++;
+    document.getElementById('spinCountNum').textContent = spinCount;
+
+    if (document.getElementById('eliminateCb').checked && items.length > 1) {
+      setTimeout(() => {
+        items.splice(winningIndex, 1);
+        weights.splice(winningIndex, 1);
+        calculateBoundaries();
+        itemsInput.value = items.join('\n');
+        savedPresets[presetSelect.value] = itemsInput.value;
+        localStorage.setItem('wheelPresets', JSON.stringify(savedPresets));
+        document.getElementById('entryCount').textContent = items.length;
+        drawWheel();
+      }, 3500);
+    }
+  }
+}
+
+spinBtn.addEventListener('click', () => {
+  if (isSpinning || items.length <= 1) return;
+  isSpinning = true;
+  spinBtn.disabled = true;
+  spinBtn.innerText = "Spinning…";
+  document.getElementById('winnerPopup').classList.remove('show');
+  if (!audioCtx) audioCtx = new AudioContext();
+  spinDuration = (spinSeconds * 1000) + (Math.random() * 1000);
+  startRotation = currentRotation;
+  targetRotation = currentRotation + (((spinSeconds / 2) + Math.random() * 4) * 2 * Math.PI);
+  spinStart = null; lastTickSlice = -1;
+  requestAnimationFrame(animateSpin);
+});
+
+// --- CONFETTI (warm colors) ---
+const cCanvas = document.getElementById('confetti');
+const cCtx = cCanvas.getContext('2d');
+let particles = [], confettiActive = false;
+const warmConfettiColors = ["#e8621a", "#f7b731", "#c84e00", "#ffd166", "#ff8c42", "#fffaf3", "#f5a020", "#e07520"];
+
+function fireConfetti() {
+  cCanvas.width = window.innerWidth; cCanvas.height = window.innerHeight;
+  particles = [];
+  for (let i = 0; i < 140; i++) {
+    particles.push({
+      x: window.innerWidth / 2, y: window.innerHeight / 2 + 50,
+      vx: (Math.random() - 0.5) * 28, vy: (Math.random() - 1) * 28 - 5,
+      size: Math.random() * 14 + 5,
+      color: warmConfettiColors[Math.floor(Math.random() * warmConfettiColors.length)],
+      rot: Math.random() * 360, rotSpeed: (Math.random() - 0.5) * 18,
+      shape: Math.random() > 0.5 ? 'rect' : 'circle'
+    });
+  }
+  if (!confettiActive) { confettiActive = true; animateConfetti(); }
+}
+
+function animateConfetti() {
+  cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+  let active = false;
+  particles.forEach(p => {
+    if (p.y < cCanvas.height) {
+      active = true;
+      p.x += p.vx; p.y += p.vy; p.vy += 0.55; p.rot += p.rotSpeed;
+      cCtx.save();
+      cCtx.translate(p.x, p.y); cCtx.rotate(p.rot * Math.PI / 180);
+      cCtx.fillStyle = p.color;
+      if (p.shape === 'circle') {
+        cCtx.beginPath(); cCtx.arc(0, 0, p.size / 2, 0, Math.PI * 2); cCtx.fill();
+      } else {
+        cCtx.fillRect(-p.size / 2, -p.size / 3, p.size, p.size * 0.6);
+      }
+      cCtx.restore();
+    }
+  });
+  if (active) requestAnimationFrame(animateConfetti); else confettiActive = false;
+}
+
+// --- UI LISTENERS ---
+document.getElementById('paletteSelect').addEventListener('change', (e) => {
+  currentColors = THEMES[e.target.value]; drawWheel();
+});
+
+document.getElementById('fontColorSelect').addEventListener('change', (e) => {
+  fontColor = e.target.value; drawWheel();
+});
+
+document.getElementById('durationSlider').addEventListener('input', (e) => {
+  spinSeconds = parseInt(e.target.value);
+  document.getElementById('durationVal').innerText = spinSeconds + 's';
+});
+
+document.getElementById('volumeSlider').addEventListener('input', (e) => {
+  tickVolume = parseFloat(e.target.value);
+  document.getElementById('volumeVal').innerText = Math.round(tickVolume * 100) + '%';
+});
+
+document.getElementById('soundTypeSelect').addEventListener('change', (e) => {
+  soundType = e.target.value;
+});
+
+const themeBtn = document.getElementById('themeBtn');
+themeBtn.addEventListener('click', () => {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  themeBtn.innerText = isDark ? '🌙' : '☀️';
+});
+
+document.getElementById('closeSidebarBtn').addEventListener('click', () => sidebar.classList.add('hidden'));
+document.getElementById('showSidebarBtn').addEventListener('click', () => sidebar.classList.remove('hidden'));
+
+document.addEventListener('click', (e) => {
+  if (e.target.id !== 'spinBtn' && !e.target.closest('.sidebar') && !e.target.closest('#showSidebarBtn')) {
+    document.getElementById('winnerPopup').classList.remove('show');
+  }
+});
+
+// Boot
+loadPresets();
+presetSelect.value = "Default";
+itemsInput.value = savedPresets["Default"];
+updateItems();
+resizeCanvas();
+</script>
+</body>
+</html>
